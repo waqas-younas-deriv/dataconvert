@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Withdrawal Analysis Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+        .container {
+            max-width: 1400px;
+        }
+        .dashboard-header {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 12px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+        }
+        .filter-section {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        .history-card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 1rem;
+            border: none;
+            transition: transform 0.2s;
+        }
+        .history-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .risk-badge {
+            padding: 0.35em 0.65em;
+            font-size: 0.875rem;
+            font-weight: 600;
+            border-radius: 50rem;
+        }
+        .risk-High {
+            background-color: #dc3545;
+            color: white;
+        }
+        .risk-Medium {
+            background-color: #ffc107;
+            color: #000;
+        }
+        .risk-Low {
+            background-color: #28a745;
+            color: white;
+        }
+        .confidence-badge {
+            background-color: #e9ecef;
+            color: #495057;
+        }
+        .detail-modal .modal-content {
+            border-radius: 12px;
+        }
+        .detail-modal .modal-header {
+            background-color: #f8f9fa;
+            border-radius: 12px 12px 0 0;
+        }
+        .metric-card {
+            background-color: #f8f9fa;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+        }
+        .metric-title {
+            font-size: 0.875rem;
+            text-transform: uppercase;
+            color: #6c757d;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+        }
+        .metric-value {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+        .reasons-list {
+            list-style-type: none;
+            padding-left: 0;
+        }
+        .reasons-list li {
+            margin-bottom: 0.5rem;
+            padding-left: 1.5rem;
+            position: relative;
+        }
+        .reasons-list li:before {
+            content: "•";
+            position: absolute;
+            left: 0.5rem;
+            color: #6c757d;
+        }
+        .timestamp {
+            font-size: 0.875rem;
+            color: #6c757d;
+        }
+        .recommendation-box {
+            background-color: #f8f9fa;
+            border-left: 4px solid #0d6efd;
+            padding: 1rem;
+            margin-top: 1rem;
+            border-radius: 4px;
+        }
+        .no-records {
+            text-align: center;
+            padding: 3rem;
+            background: white;
+            border-radius: 12px;
+            color: #6c757d;
+        }
+    </style>
+</head>
+<body>
+    <div class="container py-5">
+        <div class="dashboard-header">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1 class="mb-0">Analysis History</h1>
+                <div class="filter-section">
+                    <label class="form-label mb-0">Filter by Risk Level:</label>
+                    <select class="form-select" style="width: auto;" id="riskFilter">
+                        <option value="">All</option>
+                        <option value="High">High Risk</option>
+                        <option value="Medium">Medium Risk</option>
+                        <option value="Low">Low Risk</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <div id="historyList">
+            <!-- Analysis history cards will be inserted here -->
+        </div>
+    </div>
+
+    <!-- Detail Modal -->
+    <div class="modal fade detail-modal" id="detailModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Analysis Details</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="modalContent">
+                    <!-- Detail content will be inserted here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const API_BASE_URL = 'http://localhost:8000';
+        let detailModal;
+
+        document.addEventListener('DOMContentLoaded', function() {
+            detailModal = new bootstrap.Modal(document.getElementById('detailModal'));
+            loadHistory();
+
+            // Set up risk level filter
+            document.getElementById('riskFilter').addEventListener('change', function() {
+                loadHistory(this.value);
+            });
+        });
+
+        async function loadHistory(riskLevel = '') {
+            try {
+                const url = `${API_BASE_URL}/analysis-history${riskLevel ? `?risk_level=${riskLevel}` : ''}`;
+                const response = await fetch(url);
+                if (!response.ok) throw new Error('Failed to fetch history');
+
+                const records = await response.json();
+                displayHistory(records);
+
+            } catch (error) {
+                console.error('Error:', error);
+                document.getElementById('historyList').innerHTML = `
+                    <div class="alert alert-danger">
+                        Failed to load analysis history. Please try again later.
+                    </div>
+                `;
+            }
+        }
+
+        function displayHistory(records) {
+            const container = document.getElementById('historyList');
+            
+            if (records.length === 0) {
+                container.innerHTML = `
+                    <div class="no-records">
+                        <h4>No Records Found</h4>
+                        <p>No analysis records match the current filter criteria.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = records.map(record => `
+                <div class="card history-card">
+                    <div class="card-body">
+                        <div class="row align-items-center">
+                            <div class="col-md-3">
+                                <h5 class="card-title mb-1">User ID: ${record.user_id}</h5>
+                                <div class="timestamp">${new Date(record.timestamp).toLocaleString()}</div>
+                            </div>
+                            <div class="col-md-3">
+                                <span class="risk-badge risk-${record.risk_level}">${record.risk_level} Risk</span>
+                                <span class="badge confidence-badge ms-2">${record.confidence_percentage}% Confidence</span>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="text-truncate">
+                                    <small class="text-muted">Recommendation:</small><br>
+                                    ${record.recommendation}
+                                </div>
+                            </div>
+                            <div class="col-md-2 text-end">
+                                <div class="d-flex gap-2 justify-content-end">
+                                    <button class="btn btn-outline-primary btn-sm" onclick="showDetails('${record.id}')">
+                                        View Details
+                                    </button>
+                                    <button class="btn btn-outline-secondary btn-sm" onclick="openInBO('${record.id}', '${record.user_id}')">
+                                        Open in BO
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        async function showDetails(analysisId) {
+            try {
+                const response = await fetch(`${API_BASE_URL}/analysis-history/${analysisId}`);
+                if (!response.ok) throw new Error('Failed to fetch analysis details');
+
+                const details = await response.json();
+                displayDetails(details);
+                detailModal.show();
+
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Failed to load analysis details');
+            }
+        }
+
+        function displayDetails(details) {
+            const modalContent = document.getElementById('modalContent');
+            
+            const metricsHtml = Object.entries(details.metrics)
+                .map(([key, value]) => `
+                    <div class="metric-card">
+                        <div class="metric-title">${key.replace(/_/g, ' ').toUpperCase()}</div>
+                        <div class="metric-value">${formatMetricValue(key, value.value)}</div>
+                        <div class="metric-assessment">${value.assessment}</div>
+                    </div>
+                `).join('');
+
+            modalContent.innerHTML = `
+                <div class="mb-4">
+                    <h6 class="text-muted mb-2">Analysis Summary</h6>
+                    <div class="d-flex gap-2 mb-2">
+                        <span class="risk-badge risk-${details.risk_level}">${details.risk_level} Risk</span>
+                        <span class="badge confidence-badge">${details.confidence_percentage}% Confidence</span>
+                        <span class="badge ${details.is_suspicious ? 'bg-danger' : 'bg-success'}">
+                            ${details.is_suspicious ? 'Suspicious' : 'Not Suspicious'}
+                        </span>
+                    </div>
+                    <small class="text-muted">Analyzed on: ${new Date(details.timestamp).toLocaleString()}</small>
+                </div>
+
+                <div class="mb-4">
+                    <h6 class="text-muted mb-3">Metrics Analysis</h6>
+                    ${metricsHtml}
+                </div>
+
+                <div class="mb-4">
+                    <h6 class="text-muted mb-3">Analysis Reasons</h6>
+                    <ul class="reasons-list">
+                        ${details.reasons.map(reason => `<li>${reason}</li>`).join('')}
+                    </ul>
+                </div>
+
+                <div>
+                    <h6 class="text-muted mb-2">Recommendation</h6>
+                    <div class="recommendation-box">
+                        ${details.recommendation}
+                    </div>
+                </div>
+            `;
+        }
+
+        function formatMetricValue(key, value) {
+            if (key.includes('ratio')) {
+                return value.toFixed(2);
+            } else if (key.includes('profit') || key.includes('volume')) {
+                return `$${value.toFixed(2)}`;
+            } else if (key.includes('time')) {
+                return `${value.toFixed(1)} min`;
+            }
+            return value.toString();
+        }
+
+        function openInBO(analysisId, userId) {
+            alert(`Will open case ${analysisId} for user ${userId} in Back Office`);
+        }
+    </script>
+</body>
+</html> 

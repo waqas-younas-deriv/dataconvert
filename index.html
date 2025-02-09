@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Withdrawal Analysis Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .risk-high { 
+            color: #dc3545;
+            font-weight: 600;
+        }
+        .risk-medium { 
+            color: #ffc107;
+            font-weight: 600;
+        }
+        .risk-low { 
+            color: #28a745;
+            font-weight: 600;
+        }
+        .metric-card {
+            border-radius: 12px;
+            margin-bottom: 15px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            height: 100%;
+            background: #fff;
+            border: none;
+        }
+        .metric-card .card-body {
+            padding: 1.5rem;
+        }
+        .reasons-list {
+            list-style-type: none;
+            padding-left: 0;
+            margin-bottom: 0;
+        }
+        .reasons-list li {
+            margin-bottom: 12px;
+            padding-left: 24px;
+            position: relative;
+            line-height: 1.5;
+        }
+        .reasons-list li:before {
+            content: "•";
+            position: absolute;
+            left: 8px;
+            color: #6c757d;
+            font-size: 1.2em;
+        }
+        .reasons-list li:last-child {
+            margin-bottom: 0;
+        }
+        #analysisResult {
+            display: none;
+        }
+        .metric-title {
+            font-size: 0.875rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #6c757d;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+        .metric-value {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+        .metric-assessment {
+            color: #6c757d;
+            font-size: 0.9rem;
+        }
+        .confidence-badge {
+            display: inline-block;
+            padding: 0.35em 0.65em;
+            font-size: 0.9em;
+            font-weight: 600;
+            line-height: 1;
+            text-align: center;
+            white-space: nowrap;
+            vertical-align: baseline;
+            border-radius: 50rem;
+            background-color: #e9ecef;
+            margin-top: 8px;
+        }
+        .recommendation-box {
+            background-color: #f8f9fa;
+            border-left: 4px solid #0d6efd;
+            padding: 1rem;
+            margin-top: 0.5rem;
+            border-radius: 4px;
+        }
+        .card-title {
+            color: #212529;
+            font-weight: 600;
+            margin-bottom: 1.25rem;
+        }
+        .risk-assessment-box {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+        .risk-level {
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+        body {
+            background-color: #f8f9fa;
+        }
+        .container {
+            max-width: 1200px;
+        }
+        .loading-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 3rem;
+            text-align: center;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            margin: 2rem 0;
+        }
+        .loading-spinner {
+            width: 4rem;
+            height: 4rem;
+            margin-bottom: 1.5rem;
+        }
+        .loading-text {
+            font-size: 1.1rem;
+            color: #6c757d;
+            margin-bottom: 1rem;
+        }
+        .request-info {
+            background: #e9ecef;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            margin-top: 1rem;
+            font-family: monospace;
+            font-size: 0.9rem;
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 0.25em 0.75em;
+            font-size: 0.875rem;
+            font-weight: 600;
+            line-height: 1.5;
+            text-align: center;
+            white-space: nowrap;
+            vertical-align: baseline;
+            border-radius: 50rem;
+            margin-left: 0.5rem;
+        }
+        .status-pending {
+            color: #856404;
+            background-color: #fff3cd;
+        }
+        .status-completed {
+            color: #155724;
+            background-color: #d4edda;
+        }
+        .status-failed {
+            color: #721c24;
+            background-color: #f8d7da;
+        }
+    </style>
+</head>
+<body>
+    <div class="container py-5">
+        <h1 class="mb-4">Withdrawal Analysis Dashboard</h1>
+        
+        <!-- Request Form -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <h5 class="card-title">Submit New Analysis Request</h5>
+                <form id="withdrawalForm" class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">User ID</label>
+                        <input type="text" class="form-control" name="user_id" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Profit Made</label>
+                        <input type="number" class="form-control" name="profit_made" step="0.01" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Number of Trades</label>
+                        <input type="number" class="form-control" name="num_trades" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Volume</label>
+                        <input type="number" class="form-control" name="volume" step="0.01" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Withdrawals</label>
+                        <input type="number" class="form-control" name="withdrawals" step="0.01" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Average Time per Trade (seconds)</label>
+                        <input type="number" class="form-control" name="avg_time_per_trade" required>
+                    </div>
+                    <div class="col-12">
+                        <button type="submit" class="btn btn-primary">Submit Analysis Request</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Loading State -->
+        <div id="loadingState" style="display: none;">
+            <div class="loading-container">
+                <div class="spinner-border loading-spinner text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <div class="loading-text">Analyzing withdrawal request...</div>
+                <div id="requestInfo" class="request-info">
+                    Request ID: <span id="currentRequestId">-</span>
+                    <span id="requestStatus" class="status-badge status-pending">Pending</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Analysis Result -->
+        <div id="analysisResult" class="card">
+            <div class="card-body">
+                <h5 class="card-title">Analysis Result</h5>
+                <div class="row g-4">
+                    <!-- Risk Assessment Card -->
+                    <div class="col-md-4">
+                        <div class="card metric-card">
+                            <div class="card-body">
+                                <h6 class="metric-title">Risk Assessment</h6>
+                                <div class="risk-assessment-box">
+                                    <div>
+                                        <p class="risk-level mb-0" id="riskLevel"></p>
+                                        <div class="confidence-badge">
+                                            Confidence: <span id="confidence"></span>%
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Key Metrics Card -->
+                    <div class="col-md-8">
+                        <div class="card metric-card">
+                            <div class="card-body">
+                                <h6 class="metric-title">Key Metrics</h6>
+                                <div class="row" id="metrics">
+                                    <!-- Metrics will be inserted here -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Reasons Card -->
+                    <div class="col-md-6">
+                        <div class="card metric-card">
+                            <div class="card-body">
+                                <h6 class="metric-title">Analysis Reasons</h6>
+                                <ul class="reasons-list" id="reasons"></ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Recommendation Card -->
+                    <div class="col-md-6">
+                        <div class="card metric-card">
+                            <div class="card-body">
+                                <h6 class="metric-title">Recommendation</h6>
+                                <div class="recommendation-box" id="recommendation"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE_URL = 'http://localhost:8000';
+        let currentRequestId = null;
+        let pollingInterval = null;
+
+        document.getElementById('withdrawalForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            const requestData = {
+                user_id: formData.get('user_id'),
+                profit_made: parseFloat(formData.get('profit_made')),
+                num_trades: parseInt(formData.get('num_trades')),
+                volume: parseFloat(formData.get('volume')),
+                withdrawals: parseFloat(formData.get('withdrawals')),
+                avg_time_per_trade: parseFloat(formData.get('avg_time_per_trade'))
+            };
+
+            try {
+                // Show loading state
+                document.getElementById('loadingState').style.display = 'block';
+                document.getElementById('analysisResult').style.display = 'none';
+
+                // Submit analysis request
+                const response = await fetch(`${API_BASE_URL}/analyze-withdrawal`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(requestData)
+                });
+
+                if (!response.ok) throw new Error('Failed to submit analysis request');
+
+                const { request_id, status } = await response.json();
+                currentRequestId = request_id;
+                
+                // Update request info display
+                document.getElementById('currentRequestId').textContent = request_id;
+                updateStatusBadge(status);
+
+                // Start polling for status
+                startPolling();
+
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Failed to submit analysis request');
+                document.getElementById('loadingState').style.display = 'none';
+            }
+        });
+
+        function startPolling() {
+            if (pollingInterval) clearInterval(pollingInterval);
+
+            pollingInterval = setInterval(async () => {
+                try {
+                    const response = await fetch(`${API_BASE_URL}/analysis-status/${currentRequestId}`);
+                    if (!response.ok) throw new Error('Failed to fetch analysis status');
+
+                    const { status } = await response.json();
+                    updateStatusBadge(status);
+
+                    if (status === 'completed') {
+                        clearInterval(pollingInterval);
+                        await fetchAndDisplayResult();
+                    } else if (status === 'failed') {
+                        clearInterval(pollingInterval);
+                        document.getElementById('loadingState').style.display = 'none';
+                        alert('Analysis failed');
+                    }
+
+                } catch (error) {
+                    console.error('Error:', error);
+                    clearInterval(pollingInterval);
+                    document.getElementById('loadingState').style.display = 'none';
+                    alert('Failed to check analysis status');
+                }
+            }, 1000); // Poll every second
+        }
+
+        function updateStatusBadge(status) {
+            const statusBadge = document.getElementById('requestStatus');
+            statusBadge.className = 'status-badge status-' + status.toLowerCase();
+            statusBadge.textContent = status.charAt(0).toUpperCase() + status.slice(1);
+        }
+
+        async function fetchAndDisplayResult() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/analysis-result/${currentRequestId}`);
+                if (!response.ok) throw new Error('Failed to fetch analysis result');
+
+                const result = await response.json();
+                displayResult(result);
+
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Failed to fetch analysis result');
+                document.getElementById('loadingState').style.display = 'none';
+            }
+        }
+
+        function displayResult(result) {
+            // Hide loading state and show result
+            document.getElementById('loadingState').style.display = 'none';
+            document.getElementById('analysisResult').style.display = 'block';
+
+            // Display risk level with color coding
+            const riskClass = `risk-${result.risk_level.toLowerCase()}`;
+            document.getElementById('riskLevel').innerHTML = `
+                <span class="${riskClass}">${result.risk_level} Risk</span>
+                ${result.is_suspicious ? ' (Suspicious)' : ' (Not Suspicious)'}
+            `;
+
+            // Display confidence
+            document.getElementById('confidence').textContent = result.confidence_percentage;
+
+            // Display metrics in a grid layout
+            const metricsHtml = Object.entries(result.metrics)
+                .map(([key, value]) => `
+                    <div class="col-md-6 mb-3">
+                        <div class="metric-box">
+                            <div class="metric-title">${key.replace(/_/g, ' ').toUpperCase()}</div>
+                            <div class="metric-value">${formatMetricValue(key, value.value)}</div>
+                            <div class="metric-assessment">${value.assessment}</div>
+                        </div>
+                    </div>
+                `)
+                .join('');
+            document.getElementById('metrics').innerHTML = metricsHtml;
+
+            // Display reasons with better formatting
+            const reasonsHtml = result.reasons
+                .filter(reason => reason && reason.trim() !== '**')  // Filter out empty reasons and asterisks
+                .map(reason => `<li>${reason.replace(/^\d+\.\s*\*\*|\*\*/g, '')}</li>`)  // Remove numbering and asterisks
+                .join('');
+            document.getElementById('reasons').innerHTML = reasonsHtml;
+
+            // Display recommendation
+            document.getElementById('recommendation').textContent = 
+                result.recommendation.replace(/^\*\*|\*\*$/g, '');  // Remove asterisks
+        }
+
+        function formatMetricValue(key, value) {
+            if (key.includes('ratio')) {
+                return value.toFixed(2);
+            } else if (key.includes('profit') || key.includes('volume')) {
+                return `$${value.toFixed(2)}`;
+            } else if (key.includes('time')) {
+                return `${value.toFixed(1)} min`;
+            }
+            return value.toString();
+        }
+    </script>
+</body>
+</html> 

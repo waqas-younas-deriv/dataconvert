@@ -1,0 +1,20 @@
+{
+  "summary": {
+    "total_patterns_analyzed": 5,
+    "suspicious_patterns_detected": 0,
+    "suspicious_rate": 0.0
+  },
+  "common_fraud_indicators": {
+    "**": 10,
+    "": 5,
+    "1. **Identical Metrics to Known Fraudulent Patterns:** The current activity closely matches Pattern 2 from the database, which was flagged as fraudulent. Metrics such as Profit, Trades, Volume, Profit/Trade, Avg Time/Trade, and W/P Ratio are nearly identical.": 1,
+    "2. **High W/P Ratio:** A W/P Ratio of 778.34 is substantially elevated, indicating disproportionate withdrawals compared to profits, which is a red flag for potential money laundering or withdrawal abuse.": 1,
+    "3. **Minimal Profit with High Volume:** Generating only $1.57 in profit from 2 trades with a volume of $75,000 is inconsistent with standard trading profitability and suggests manipulation.": 1,
+    "4. **Extremely Fast Trading Execution:** An average trade time of 0.03 minutes (1.8 seconds) is implausibly swift for legitimate trading platforms, often associated with automated or fraudulent trading bots.": 1,
+    "5. **Withdrawal Pattern:** The withdrawal amount ($1,222.00) is disproportionately high relative to the profits earned, aligning with suspicious withdrawal behaviors observed in fraudulent activities.": 1,
+    "1. **Withdrawal Analysis:** The W/P ratio of 2.62 aligns well with established non-fraudulent patterns, indicating that withdrawal amounts are reasonable relative to profits.": 1,
+    "2. **Trading Performance:** Profit per trade and profit per volume are consistent with legitimate trading behaviors observed in the database.": 1,
+    "3. **Volume and Activity:** While the trading volume is higher than comparable patterns, it does not inherently signal fraud, especially when correlated with proportional withdrawals and profits.": 1
+  },
+  "recent_suspicious_patterns": []
+}
